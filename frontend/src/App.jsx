@@ -416,7 +416,9 @@ export default function App() {
             initial={{
               ...modal,
               department_id: modal.department_id || "",
-              hire_date: modal.hire_date?.split("T")[0] || "",
+              hire_date: modal.hire_date
+              ? new Date(modal.hire_date).toISOString().split("T")[0]
+              : "",
             }}
             departments={departments}
             onSubmit={handleUpdate}
