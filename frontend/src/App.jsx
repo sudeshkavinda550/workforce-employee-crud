@@ -3,14 +3,14 @@ import "./App.css";
 
 const API = "http://localhost:5000/api";
 
-const fmt$ = (n) =>
-  n != null ? "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 0 }) : "-";
+const fmtLKR = (n) =>
+  n != null ? "LKR " + Number(n).toLocaleString("en-LK", { minimumFractionDigits: 2 }) : "-";
 
 const initials = (name = "") =>
   name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
 const AVATAR_COLORS = [
-  "#e63946","#457b9d","#2a9d8f","#e9c46a","#f4a261","#9b5de5","#00b4d8","#06d6a0",
+  "#e63946","#457b9d","#2a9d8f","#c9963a","#e07b3a","#7c3aed","#0284c7","#059669",
 ];
 const avatarColor = (id) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
@@ -114,8 +114,6 @@ function EmployeeForm({ initial = {}, departments, onSubmit, onClose, loading })
     } catch (e) {
       if (e.message.toLowerCase().includes("email")) {
         setErr("This email is already registered. Please use a different email.");
-      } else if (e.message.toLowerCase().includes("name")) {
-        setErr(e.message);
       } else {
         setErr(e.message);
       }
@@ -138,7 +136,7 @@ function EmployeeForm({ initial = {}, departments, onSubmit, onClose, loading })
           <option>Inactive</option>
           <option>OnLeave</option>
         </FormSelect>
-        <FormInput label="Salary (USD)" value={form.salary} onChange={set("salary")} placeholder="75000" type="number" />
+        <FormInput label="Salary (LKR)" value={form.salary} onChange={set("salary")} placeholder="75000.00" type="number" />
         <FormInput label="Hire Date" value={form.hire_date} onChange={set("hire_date")} type="date" />
       </div>
       {err && <div className="form-error">{err}</div>}
@@ -223,14 +221,12 @@ export default function App() {
       if (duplicateName) {
         throw new Error("An employee with this name already exists.");
       }
-
       const duplicateEmail = allEmployees.find(
         (emp) => emp.email.trim().toLowerCase() === form.email.trim().toLowerCase()
       );
       if (duplicateEmail) {
         throw new Error("This email is already registered. Please use a different email.");
       }
-
       await apiFetch("/employees", { method: "POST", body: JSON.stringify(form) });
       setModal(null);
       fetchEmployees();
@@ -255,7 +251,6 @@ export default function App() {
       if (duplicateName) {
         throw new Error("Another employee with this name already exists.");
       }
-
       const duplicateEmail = allEmployees.find(
         (emp) =>
           emp.email.trim().toLowerCase() === form.email.trim().toLowerCase() &&
@@ -264,7 +259,6 @@ export default function App() {
       if (duplicateEmail) {
         throw new Error("This email is already registered. Please use a different email.");
       }
-
       await apiFetch(`/employees/${modal.id}`, { method: "PUT", body: JSON.stringify(form) });
       setModal(null);
       fetchEmployees();
@@ -293,9 +287,6 @@ export default function App() {
 
   return (
     <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-
       <div className="app">
 
         {toast && (
@@ -316,10 +307,10 @@ export default function App() {
 
           {stats && (
             <div className="stats-row">
-              <StatCard label="Total Employees" value={stats.total} accent="#a5b4fc" />
-              <StatCard label="Active" value={stats.active} accent="#4ade80" />
-              <StatCard label="Inactive / Leave" value={stats.inactive} accent="#fb923c" />
-              <StatCard label="Avg. Salary" value={fmt$(stats.avg_salary)} accent="#facc15" />
+              <StatCard label="Total Employees" value={stats.total} accent="#1d4ed8" />
+              <StatCard label="Active" value={stats.active} accent="#15803d" />
+              <StatCard label="Inactive / Leave" value={stats.inactive} accent="#b45309" />
+              <StatCard label="Avg. Salary" value={fmtLKR(stats.avg_salary)} accent="#7c3aed" />
             </div>
           )}
 
@@ -355,7 +346,7 @@ export default function App() {
               <span>Employee</span>
               <span>Contact</span>
               <span>Department</span>
-              <span>Salary</span>
+              <span>Salary (LKR)</span>
               <span>Status</span>
               <span className="col-right">Actions</span>
             </div>
@@ -380,7 +371,7 @@ export default function App() {
                   <div className="emp-phone">{emp.phone || "-"}</div>
                 </div>
                 <div className="emp-dept">{emp.department_name || "-"}</div>
-                <div className="emp-salary">{fmt$(emp.salary)}</div>
+                <div className="emp-salary">{fmtLKR(emp.salary)}</div>
                 <div><Badge status={emp.status} /></div>
                 <div className="row-actions">
                   <button className="action-btn action-edit" onClick={() => setModal(emp)}>Edit</button>
