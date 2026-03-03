@@ -175,6 +175,44 @@ def update_employee(emp_id):
                 return jsonify(emp)
             except psycopg2.errors.UniqueViolation:
                 return jsonify({"error": "Email already exists"}), 409
+@app.route("/api/employees/<int:emp_id>", methods=["DELETE"])
+def delete_employee(emp_id):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM employees WHERE id = %s RETURNING id", (emp_id,))
+            if not cur.fetchone():
+                return jsonify({"error": "Employee not found"}), 404
+            conn.commit()
+    return jsonify({"message": "Employee deleted successfully"})
+
+@app.route("/api/stats", methods=["GET"])
+def get_stats():
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT COUNT(*) AS total FROM employees")
+            total = cur.fetchone()["total"]
+
+            cur.execute("SELECT COUNT(*) AS active FROM employees WHERE status = 'Active'")
+            active = cur.fetchone()["active"]
+
+            cur.execute("SELECT AVG(salary) AS avg_salary FROM employees WHERE salary IS NOT NULL")
+            avg_salary = cur.fetchone()["avg_salary"] or 0
+
+            cur.execute("""
+                SELECT d.name, COUNT(e.id) AS count
+                FROM departments d
+                LEFT JOIN employees e ON e.department_id = d.id
+                GROUP BY d.name ORDER BY count DESC
+            """)
+            by_dept = cur.fetchall()
+
+    return jsonify({
+        "total":      total,
+        "active":     active,
+        "inactive":   total - active,
+        "avg_salary": float(avg_salary),
+        "by_dept":    by_dept,
+    })
 
 if __name__ == "__main__":
     init_db()
