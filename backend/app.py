@@ -115,6 +115,67 @@ def get_employee(emp_id):
         return jsonify({"error": "Employee not found"}), 404
     return jsonify(emp)
 
+@app.route("/api/employees", methods=["POST"])
+def create_employee():
+    from flask import request
+    data = request.get_json()
+    if not data.get("name") or not data.get("email"):
+        return jsonify({"error": "name and email are required"}), 400
+
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO employees (name, email, phone, department_id, role, salary, status, hire_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING *
+                """, (
+                    data["name"], data["email"], data.get("phone"),
+                    data.get("department_id"), data.get("role"),
+                    data.get("salary"), data.get("status", "Active"),
+                    data.get("hire_date"),
+                ))
+                emp = cur.fetchone()
+                conn.commit()
+                return jsonify(emp), 201
+            except psycopg2.errors.UniqueViolation:
+                return jsonify({"error": "Email already exists"}), 409
+
+@app.route("/api/employees/<int:emp_id>", methods=["PUT"])
+def update_employee(emp_id):
+    from flask import request
+    data = request.get_json()
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id FROM employees WHERE id = %s", (emp_id,))
+            if not cur.fetchone():
+                return jsonify({"error": "Employee not found"}), 404
+            try:
+                cur.execute("""
+                    UPDATE employees SET
+                        name          = COALESCE(%s, name),
+                        email         = COALESCE(%s, email),
+                        phone         = %s,
+                        department_id = %s,
+                        role          = %s,
+                        salary        = %s,
+                        status        = COALESCE(%s, status),
+                        hire_date     = %s,
+                        updated_at    = NOW()
+                    WHERE id = %s
+                    RETURNING *
+                """, (
+                    data.get("name"), data.get("email"), data.get("phone"),
+                    data.get("department_id"), data.get("role"),
+                    data.get("salary"), data.get("status"),
+                    data.get("hire_date"), emp_id,
+                ))
+                emp = cur.fetchone()
+                conn.commit()
+                return jsonify(emp)
+            except psycopg2.errors.UniqueViolation:
+                return jsonify({"error": "Email already exists"}), 409
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
